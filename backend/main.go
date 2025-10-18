@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/jafoor/carhub/libs/config"
 	"github.com/jafoor/carhub/libs/database"
 	"github.com/jafoor/carhub/libs/logger"
@@ -20,6 +21,14 @@ func main() {
 	})
 
 	app := fiber.New()
+
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "http://localhost:3000, http://127.0.0.1:3000", // Your Next.js frontend URL
+		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With",
+		AllowCredentials: true,
+		MaxAge:           86400, // 24 hours
+	}))
 
 	app.Use(middleware.RequestLogger())
 	app.Use(middleware.Recovery())

@@ -2,6 +2,7 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -32,7 +33,7 @@ func GenerateAccessToken(u *models.User) (string, string, error) {
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(exp),
 			ID:        jti,
-			Subject:   string(rune(u.ID)),
+			Subject:   fmt.Sprintf("%d", u.ID),
 		},
 	}
 

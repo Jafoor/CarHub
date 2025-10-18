@@ -18,8 +18,11 @@ func RegisterUserRoutes(app *fiber.App) {
 
 	v1.Post("/auth/signup", userCtrl.Signup)
 	v1.Post("/auth/signin", userCtrl.Signin)
+	v1.Post("/auth/refresh", userCtrl.RefreshToken)
 
 	secured := v1.Group("/users", middleware.JWTAuth())
 	secured.Get("/profile", middleware.RequireRole("user", "admin"), userCtrl.Profile)
 	secured.Post("/logout", userCtrl.Logout)
+	secured.Get("/", middleware.RequireRole("admin"), userCtrl.GetUsers)
+
 }
