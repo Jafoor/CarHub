@@ -16,11 +16,11 @@ func RequireRole(roles ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		userRole, ok := c.Locals("role").(string)
 		if !ok {
-			return utils.ErrorResponse(c, http.StatusForbidden, "Access denied")
+			return utils.ErrorResponse(c, http.StatusForbidden, "Access denied", nil)
 		}
 
 		if !roleMap[userRole] {
-			return utils.ErrorResponse(c, http.StatusForbidden, "Insufficient permissions")
+			return utils.ErrorResponse(c, http.StatusForbidden, "Insufficient permissions", nil)
 		}
 
 		return c.Next()

@@ -1,3 +1,4 @@
+// services/users/routes/user_routes.go
 package routes
 
 import (
@@ -13,16 +14,26 @@ func RegisterUserRoutes(app *fiber.App) {
 
 	// Initialize dependencies
 	userRepo := repository.NewUserRepository()
-	userService := service.NewUserService(userRepo)
+	otpRepo := repository.NewOTPRepository()
+	userService := service.NewUserService(userRepo, otpRepo)
 	userCtrl := controller.NewUserController(userService)
+	adminCtrl := controller.NewAdminController(userService)
+	otpCtrl := controller.NewOTPController(userService)
 
+	// Public routes
 	v1.Post("/auth/signup", userCtrl.Signup)
 	v1.Post("/auth/signin", userCtrl.Signin)
+	v1.Post("/auth/admin/login", adminCtrl.AdminLogin) // Separate admin login
 	v1.Post("/auth/refresh", userCtrl.RefreshToken)
 
-	secured := v1.Group("/users", middleware.JWTAuth())
+	// OTP routes (require authentication but not verification)
+	auth := v1.Group("/auth", middleware.JWTAuth())
+	auth.Post("/verify-otp", otpCtrl.VerifyOTP)
+	auth.Post("/resend-otp", otpCtrl.ResendOTP)
+
+	// Secured routes (require verified users)
+	secured := v1.Group("/users", middleware.JWTAuth(), middleware.RequireVerified())
 	secured.Get("/profile", middleware.RequireRole("user", "admin"), userCtrl.Profile)
 	secured.Post("/logout", userCtrl.Logout)
 	secured.Get("/", middleware.RequireRole("admin"), userCtrl.GetUsers)
-
 }

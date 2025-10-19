@@ -13,7 +13,7 @@ func Recovery() fiber.Handler {
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Error().Err(err).Msg("panic recovered")
-				utils.ErrorResponse(c, http.StatusInternalServerError, "Internal server error")
+				utils.ErrorResponse(c, http.StatusInternalServerError, "Internal server error", nil)
 			}
 		}()
 		return c.Next()

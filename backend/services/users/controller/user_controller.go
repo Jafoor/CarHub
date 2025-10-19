@@ -17,12 +17,12 @@ func NewUserController(s service.UserService) *UserController {
 func (uc *UserController) Signup(c *fiber.Ctx) error {
 	var input service.SignupInput
 	if err := c.BodyParser(&input); err != nil {
-		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid request")
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid request", nil)
 	}
 
 	token, err := uc.service.Signup(input)
 	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusBadRequest, err.Error())
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
 	return utils.SuccessResponse(c, "User created successfully", token)
@@ -31,12 +31,12 @@ func (uc *UserController) Signup(c *fiber.Ctx) error {
 func (uc *UserController) Signin(c *fiber.Ctx) error {
 	var input service.SigninInput
 	if err := c.BodyParser(&input); err != nil {
-		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid request")
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid request", nil)
 	}
 
 	token, err := uc.service.Signin(input)
 	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusUnauthorized, err.Error())
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
 	return utils.SuccessResponse(c, "Login successful", token)
@@ -49,16 +49,16 @@ func (uc *UserController) RefreshToken(c *fiber.Ctx) error {
 
 	var req RefreshRequest
 	if err := c.BodyParser(&req); err != nil {
-		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid request")
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "invalid request", nil)
 	}
 
 	if req.RefreshToken == "" {
-		return utils.ErrorResponse(c, fiber.StatusBadRequest, "refresh token is required")
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, "refresh token is required", nil)
 	}
 
 	tokenResponse, err := uc.service.RefreshToken(req.RefreshToken)
 	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusUnauthorized, err.Error())
+		return utils.ErrorResponse(c, fiber.StatusUnauthorized, err.Error(), nil)
 	}
 
 	return utils.SuccessResponse(c, "Token refreshed successfully", tokenResponse)
@@ -94,7 +94,7 @@ func (uc *UserController) GetUsers(c *fiber.Ctx) error {
 	// Call service to get users
 	users, pagination, err := uc.service.GetUsers(paginationReq)
 	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusInternalServerError, err.Error())
+		return utils.ErrorResponse(c, fiber.StatusInternalServerError, err.Error(), nil)
 	}
 
 	response := map[string]interface{}{
@@ -114,7 +114,7 @@ func (uc *UserController) Profile(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	user, err := uc.service.GetProfile(userID)
 	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusNotFound, "user not found")
+		return utils.ErrorResponse(c, fiber.StatusNotFound, "user not found", nil)
 	}
 
 	return utils.SuccessResponse(c, "", user)
@@ -124,7 +124,7 @@ func (uc *UserController) Logout(c *fiber.Ctx) error {
 	userID := c.Locals("user_id").(uint)
 	err := uc.service.Logout(userID)
 	if err != nil {
-		return utils.ErrorResponse(c, fiber.StatusBadRequest, err.Error())
+		return utils.ErrorResponse(c, fiber.StatusBadRequest, err.Error(), nil)
 	}
 
 	return utils.SuccessResponse(c, "logged out successfully", nil)

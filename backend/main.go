@@ -9,7 +9,9 @@ import (
 	"github.com/jafoor/carhub/libs/database"
 	"github.com/jafoor/carhub/libs/logger"
 	"github.com/jafoor/carhub/libs/middleware"
-	"github.com/jafoor/carhub/services/users/routes"
+	locationRoutes "github.com/jafoor/carhub/services/locations/routes"
+	userRoutes "github.com/jafoor/carhub/services/users/routes"
+	vehicleRoutes "github.com/jafoor/carhub/services/vehicles/routes"
 )
 
 func main() {
@@ -37,7 +39,9 @@ func main() {
 		return c.JSON(fiber.Map{"message": "CarHub API Running 🚗"})
 	})
 
-	routes.RegisterUserRoutes(app)
+	userRoutes.RegisterUserRoutes(app)
+	vehicleRoutes.RegisterVehicleRoutes(app)
+	locationRoutes.RegisterLocationRoutes(app)
 
 	port := config.App.ServerPort
 	logger.Log.Info().Msgf("Server running on port %s", port)

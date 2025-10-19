@@ -39,3 +39,15 @@ type RefreshToken struct {
 	Revoked   bool      `gorm:"default:false;index"`
 	CreatedAt time.Time
 }
+
+type OTP struct {
+	ID        uint           `gorm:"primaryKey" json:"id"`
+	UserID    uint           `gorm:"not null;index" json:"user_id"`
+	OTPCode   string         `gorm:"size:6;not null" json:"otp_code"`
+	Purpose   string         `gorm:"size:50;not null" json:"purpose"` // "signup", "reset_password", etc.
+	ExpiresAt time.Time      `gorm:"not null" json:"expires_at"`
+	Used      bool           `gorm:"default:false" json:"used"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+}

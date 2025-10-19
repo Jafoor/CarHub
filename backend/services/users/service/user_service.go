@@ -1,11 +1,13 @@
 package service
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"strings"
 	"time"
 
@@ -84,14 +86,22 @@ type UserService interface {
 	GetProfile(userID uint) (*UserProfileResponse, error)
 	GetUsers(req UserPaginationRequest) ([]UserResponse, *PaginationInfo, error)
 	Logout(userID uint) error
+
+	VerifyOTP(userID uint, otpCode string) error
+	ResendOTP(userID uint) error
+	AdminLogin(req SigninInput) (*TokenResponse, error)
 }
 
 type userService struct {
-	repo repository.UserRepository
+	userRepo repository.UserRepository
+	otpRepo  repository.OTPRepository
 }
 
-func NewUserService(repo repository.UserRepository) UserService {
-	return &userService{repo: repo}
+func NewUserService(userRepo repository.UserRepository, otpRepo repository.OTPRepository) UserService {
+	return &userService{
+		userRepo: userRepo,
+		otpRepo:  otpRepo,
+	}
 }
 
 // Utility functions
@@ -130,25 +140,23 @@ func (s *userService) Signup(req SignupInput) (*TokenResponse, error) {
 		return nil, errors.New("missing required fields")
 	}
 
-	existingUser, err := s.repo.FindByEmail(req.Email)
+	// Check if user already exists
+	existingUser, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
 		return nil, fmt.Errorf("database error: %w", err)
 	}
 
 	if req.Phone != "" {
-		existingUserByPhoneNumber, err := s.repo.FindByPhone(req.Phone)
+		existingUserByPhone, err := s.userRepo.FindByPhone(req.Phone)
 		if err != nil {
 			return nil, fmt.Errorf("database error: %w", err)
 		}
-		if existingUserByPhoneNumber != nil {
-			logger.Log.Info().Str("email", req.Email).Msg("user already exists during signup")
+		if existingUserByPhone != nil {
 			return nil, errors.New("user already exists")
 		}
 	}
 
 	if existingUser != nil {
-		// Now this will only be true if a user was actually found
-		logger.Log.Info().Str("email", req.Email).Msg("user already exists during signup")
 		return nil, errors.New("user already exists")
 	}
 
@@ -156,7 +164,7 @@ func (s *userService) Signup(req SignupInput) (*TokenResponse, error) {
 	if roleName == "" {
 		roleName = "user"
 	}
-	role, err := s.repo.FindRoleByName(roleName)
+	role, err := s.userRepo.FindRoleByName(roleName)
 	if err != nil {
 		return nil, errors.New("role not found")
 	}
@@ -172,27 +180,85 @@ func (s *userService) Signup(req SignupInput) (*TokenResponse, error) {
 		Phone:        req.Phone,
 		PasswordHash: pwHash,
 		RoleID:       role.ID,
+		IsVerified:   false, // User starts as unverified
 	}
 
 	var tokenResponse *TokenResponse
 
 	err = executeTransaction(func(tx *gorm.DB) error {
 		// Create user
-		if err := s.repo.Create(tx, user); err != nil {
+		if err := s.userRepo.Create(tx, user); err != nil {
 			return err
 		}
 
-		// Preload role within transaction
-		if err := tx.Preload("Role").First(user, user.ID).Error; err != nil {
+		// Generate OTP for verification
+		otp, err := s.generateOTP(user.ID, "signup")
+		if err != nil {
 			return err
 		}
 
-		// Generate tokens
+		if err := s.otpRepo.Create(tx, otp); err != nil {
+			return err
+		}
+
+		// For non-admin users, don't generate tokens until verified
+		if roleName != "admin" {
+			// Generate limited access token for unverified users
+			accessToken, _, err := auth.GenerateUnverifiedAccessToken(user)
+			if err != nil {
+				return err
+			}
+
+			tokenResponse = &TokenResponse{
+				AccessToken:  accessToken,
+				RefreshToken: "",                            // No refresh token for unverified users
+				ExpiresIn:    config.App.UnverifiedTokenTTL, // Shorter TTL
+			}
+		}
+
+		return nil
+	})
+
+	return tokenResponse, err
+}
+
+func (s *userService) AdminLogin(req SigninInput) (*TokenResponse, error) {
+	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+
+	// Find user
+	user, err := s.userRepo.FindByEmail(req.Email)
+	if err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	if user == nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	// Strict admin checks
+	if user.Role.Name != "admin" {
+		return nil, errors.New("access denied: admin role required")
+	}
+
+	if !user.IsVerified {
+		return nil, errors.New("account not verified. Please verify your email first")
+	}
+
+	// Verify password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		return nil, errors.New("invalid credentials")
+	}
+
+	var tokenResponse *TokenResponse
+
+	err = executeTransaction(func(tx *gorm.DB) error {
+		// Generate access token
 		accessToken, _, err := auth.GenerateAccessToken(user)
 		if err != nil {
 			return err
 		}
 
+		// Create refresh token
 		refreshPlain, err := auth.GenerateRefreshToken(user)
 		if err != nil {
 			return err
@@ -202,14 +268,20 @@ func (s *userService) Signup(req SignupInput) (*TokenResponse, error) {
 			return err
 		}
 
-		// Create refresh token
 		rt := &models.RefreshToken{
 			UserID:    user.ID,
 			TokenHash: refreshHash,
 			ExpiresAt: time.Now().Add(time.Duration(config.App.RefreshTokenTTL) * time.Second),
 		}
-		if err := s.repo.ReplaceRefreshToken(tx, rt); err != nil {
+		if err := s.userRepo.ReplaceRefreshToken(tx, rt); err != nil {
 			return err
+		}
+
+		// Update last login
+		now := time.Now()
+		user.LastLoginAt = &now
+		if updateErr := s.userRepo.Update(tx, user); updateErr != nil {
+			logger.Log.Warn().Err(updateErr).Msg("failed updating last login")
 		}
 
 		tokenResponse = &TokenResponse{
@@ -223,17 +295,102 @@ func (s *userService) Signup(req SignupInput) (*TokenResponse, error) {
 	return tokenResponse, err
 }
 
+func (s *userService) VerifyOTP(userID uint, otpCode string) error {
+	// Find valid OTP
+	otp, err := s.otpRepo.FindValidOTP(userID, otpCode, "signup")
+	if err != nil {
+		return err
+	}
+
+	if otp == nil {
+		return errors.New("invalid or expired OTP")
+	}
+
+	return executeTransaction(func(tx *gorm.DB) error {
+		// Mark OTP as used
+		if err := s.otpRepo.MarkAsUsed(tx, otp.ID); err != nil {
+			return err
+		}
+
+		// Update user as verified
+		var user models.User
+		if err := tx.First(&user, userID).Error; err != nil {
+			return err
+		}
+
+		user.IsVerified = true
+		return tx.Save(&user).Error
+	})
+}
+
+func (s *userService) ResendOTP(userID uint) error {
+	// Check OTP limits (max 3 OTPs per hour)
+	count, err := s.otpRepo.CountRecentOTPs(userID, "signup", time.Hour)
+	if err != nil {
+		return err
+	}
+
+	if count >= 3 {
+		return errors.New("OTP limit exceeded. Please try again later")
+	}
+
+	// Generate new OTP
+	otp, err := s.generateOTP(userID, "signup")
+	if err != nil {
+		return err
+	}
+
+	return executeTransaction(func(tx *gorm.DB) error {
+		return s.otpRepo.Create(tx, otp)
+	})
+}
+
+func (s *userService) generateOTP(userID uint, purpose string) (*models.OTP, error) {
+	// Generate 6-digit OTP
+	otpCode, err := generateRandomOTP(6)
+	if err != nil {
+		return nil, err
+	}
+
+	return &models.OTP{
+		UserID:    userID,
+		OTPCode:   otpCode,
+		Purpose:   purpose,
+		ExpiresAt: time.Now().Add(30 * time.Minute), // 30 minutes expiry
+		Used:      false,
+	}, nil
+}
+
+func generateRandomOTP(length int) (string, error) {
+	const digits = "0123456789"
+	otp := make([]byte, length)
+
+	for i := range otp {
+		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(digits))))
+		if err != nil {
+			return "", err
+		}
+		otp[i] = digits[num.Int64()]
+	}
+
+	return string(otp), nil
+}
+
 func (s *userService) Signin(req SigninInput) (*TokenResponse, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
 	// Find user (read outside transaction)
-	user, err := s.repo.FindByEmail(req.Email)
+	user, err := s.userRepo.FindByEmail(req.Email)
 	if err != nil {
 		return nil, errors.New("invalid credentials")
 	}
 
 	if user == nil {
 		return nil, errors.New("invalid credentials")
+	}
+
+	if !user.IsVerified {
+		return nil, errors.New("account not verified. Please verify your email first")
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
@@ -264,14 +421,14 @@ func (s *userService) Signin(req SigninInput) (*TokenResponse, error) {
 			TokenHash: refreshHash,
 			ExpiresAt: time.Now().Add(time.Duration(config.App.RefreshTokenTTL) * time.Second),
 		}
-		if err := s.repo.ReplaceRefreshToken(tx, rt); err != nil {
+		if err := s.userRepo.ReplaceRefreshToken(tx, rt); err != nil {
 			return err
 		}
 
 		// Update last login (non-critical)
 		now := time.Now()
 		user.LastLoginAt = &now
-		if updateErr := s.repo.Update(tx, user); updateErr != nil {
+		if updateErr := s.userRepo.Update(tx, user); updateErr != nil {
 			logger.Log.Warn().Err(updateErr).Msg("failed updating last login")
 			// Continue despite this error
 		}
@@ -302,7 +459,7 @@ func (s *userService) RefreshToken(refreshToken string) (*TokenResponse, error) 
 		}
 
 		// Get user's refresh token from database
-		tokens, err := s.repo.FindRefreshTokensByUser(userID)
+		tokens, err := s.userRepo.FindRefreshTokensByUser(userID)
 		if err != nil || len(tokens) == 0 {
 			return errors.New("invalid refresh token")
 		}
@@ -352,7 +509,7 @@ func (s *userService) RefreshToken(refreshToken string) (*TokenResponse, error) 
 			ExpiresAt: time.Now().Add(time.Duration(config.App.RefreshTokenTTL) * time.Second),
 		}
 
-		if err := s.repo.ReplaceRefreshToken(tx, newRt); err != nil {
+		if err := s.userRepo.ReplaceRefreshToken(tx, newRt); err != nil {
 			return err
 		}
 

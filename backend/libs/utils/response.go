@@ -17,9 +17,10 @@ func SuccessResponse(c *fiber.Ctx, message string, data interface{}) error {
 	})
 }
 
-func ErrorResponse(c *fiber.Ctx, status int, message string) error {
+func ErrorResponse(c *fiber.Ctx, status int, message string, data interface{}) error {
 	return c.Status(status).JSON(JSONResponse{
 		Success: false,
 		Message: message,
+		Data:    data, // pass nil to return "data": null
 	})
 }

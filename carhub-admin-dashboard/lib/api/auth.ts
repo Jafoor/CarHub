@@ -28,7 +28,7 @@ interface TokenResponse {
 }
 
 export async function login(credentials: LoginCredentials): Promise<TokenResponse> {
-  const response = await api.post<BackendApiResponse<TokenResponse>>('/api/v1/auth/signin', credentials);
+  const response = await api.post<BackendApiResponse<TokenResponse>>('/api/v1/auth/admin/login', credentials);
   
   if (!response.data.success) {
     throw new Error(response.data.message);

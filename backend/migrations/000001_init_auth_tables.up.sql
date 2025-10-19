@@ -47,6 +47,25 @@ CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens (toke
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens (expires_at);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_revoked ON refresh_tokens (revoked);
 
+-- Create OTP table
+CREATE TABLE otps (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    otp_code VARCHAR(6) NOT NULL,
+    purpose VARCHAR(50) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Create indexes
+CREATE INDEX idx_otps_user_id ON otps(user_id);
+CREATE INDEX idx_otps_expires_at ON otps(expires_at);
+CREATE INDEX idx_otps_used ON otps(used);
+
 -- 4. Insert default roles
 INSERT INTO roles (name, description)
 VALUES

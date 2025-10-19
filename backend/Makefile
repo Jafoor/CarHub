@@ -7,7 +7,7 @@ APP_NAME=carhub
 MAIN_FILE=main.go
 
 DB_USER=postgres
-DB_PASSWORD=postgres
+DB_PASSWORD=12345678
 DB_NAME=carhub
 DB_HOST=localhost
 DB_PORT=5432

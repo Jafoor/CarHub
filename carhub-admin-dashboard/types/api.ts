@@ -1,11 +1,10 @@
-// types/api.ts
 export interface PaginationParams {
   page: number;
   limit: number;
   search?: string;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
-  [key: string]: any; // For additional filters
+  [key: string]: any;
 }
 
 export interface PaginationMeta {

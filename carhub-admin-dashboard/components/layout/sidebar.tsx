@@ -6,9 +6,12 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   Car,
+  Bike,
+  Tag,
   Users,
   Building,
   LayoutDashboard,
+  MapPin, Map,
   LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,9 +19,13 @@ import { LogoutButton } from '../auth/logout-button';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Users', href: '/dashboard/users', icon: Users },
-  { name: 'Showrooms', href: '/dashboard/showrooms', icon: Building },
-  { name: 'Cars', href: '/dashboard/cars', icon: Car },
+  { name: 'Users', href: '/users', icon: Users },
+  { name: 'Vehicle Types', href: '/vehicle-types', icon: Car },
+  { name: 'Brands', href: '/brands', icon: Tag },
+   { name: 'Divisions', href: '/divisions', icon: Map },
+  { name: 'Districts', href: '/districts', icon: MapPin },
+  { name: 'Showrooms', href: '/showrooms', icon: Building },
+  { name: 'Cars', href: '/cars', icon: Car },
 ];
 
 export function Sidebar() {
