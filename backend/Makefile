@@ -8,7 +8,7 @@ MAIN_FILE=main.go
 
 DB_USER=postgres
 DB_PASSWORD=12345678
-DB_NAME=carhub
+DB_NAME=car-management
 DB_HOST=localhost
 DB_PORT=5432
 DB_SSL=disable

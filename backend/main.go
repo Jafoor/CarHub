@@ -9,9 +9,7 @@ import (
 	"github.com/jafoor/carhub/libs/database"
 	"github.com/jafoor/carhub/libs/logger"
 	"github.com/jafoor/carhub/libs/middleware"
-	locationRoutes "github.com/jafoor/carhub/services/locations/routes"
-	userRoutes "github.com/jafoor/carhub/services/users/routes"
-	vehicleRoutes "github.com/jafoor/carhub/services/vehicles/routes"
+	partnerRoutes "github.com/jafoor/carhub/services/partner/routes"
 )
 
 func main() {
@@ -26,7 +24,7 @@ func main() {
 
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3000, http://127.0.0.1:3000", // Your Next.js frontend URL
-		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
+		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With",
 		AllowCredentials: true,
 		MaxAge:           86400, // 24 hours
@@ -39,9 +37,7 @@ func main() {
 		return c.JSON(fiber.Map{"message": "CarHub API Running 🚗"})
 	})
 
-	userRoutes.RegisterUserRoutes(app)
-	vehicleRoutes.RegisterVehicleRoutes(app)
-	locationRoutes.RegisterLocationRoutes(app)
+	partnerRoutes.RegisterPartnerRoutes(app)
 
 	port := config.App.ServerPort
 	logger.Log.Info().Msgf("Server running on port %s", port)

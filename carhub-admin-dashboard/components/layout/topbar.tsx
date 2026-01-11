@@ -17,14 +17,6 @@ export function Topbar() {
   return (
     <header className="bg-white shadow-sm border-b">
       <div className="flex items-center justify-between px-6 py-4">
-        {/* Search Bar */}
-        <div className="relative w-80">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search..."
-            className="pl-10 pr-4 py-2 w-full"
-          />
-        </div>
 
         {/* Right Side Actions */}
         <div className="flex items-center space-x-4">
