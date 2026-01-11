@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jafoor/carhub/libs/database"
+	"github.com/jafoor/carhub/libs/database" // ← for ExecuteTransaction & DB
 	model "github.com/jafoor/carhub/libs/models"
 	otpRepository "github.com/jafoor/carhub/libs/repository"
 	"github.com/jafoor/carhub/services/partner/repository"
@@ -35,7 +35,7 @@ type PartnerService interface {
 
 type partnerService struct {
 	partnerRepo repository.PartnerRepository
-	otpRepo     otpRepository.OTPRepository // assuming you have this in libs or shared
+	otpRepo     otpRepository.OTPRepository
 }
 
 func NewPartnerService(
@@ -48,22 +48,11 @@ func NewPartnerService(
 	}
 }
 
-// Utility: execute transaction
-type txOperation func(tx *gorm.DB) error
-
-func executeTransaction(op txOperation) error {
-	return database.WriteDB.Transaction(func(tx *gorm.DB) error {
-		return op(tx)
-	})
-}
-
-// Utility: hash password
 func hashPassword(password string) (string, error) {
 	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	return string(bytes), err
 }
 
-// Utility: generate OTP
 func generateOTP(length int) (string, error) {
 	const digits = "0123456789"
 	otp := make([]byte, length)
@@ -77,11 +66,9 @@ func generateOTP(length int) (string, error) {
 	return string(otp), nil
 }
 
-// MAIN SIGNUP LOGIC
 func (s *partnerService) Signup(req SignupInput) (*SignupResponse, error) {
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 
-	// Check if partner already exists
 	existing, err := s.partnerRepo.FindByEmail(email)
 	if err != nil {
 		return nil, errors.New("database_error")
@@ -89,7 +76,6 @@ func (s *partnerService) Signup(req SignupInput) (*SignupResponse, error) {
 
 	if existing != nil {
 		if existing.Status == model.StatusUnverified && !existing.EmailVerified {
-			// Already signed up but not verified → guide to OTP
 			return &SignupResponse{
 				Email:      email,
 				NextAction: "verify_otp",
@@ -98,7 +84,6 @@ func (s *partnerService) Signup(req SignupInput) (*SignupResponse, error) {
 		return nil, errors.New("email_already_registered")
 	}
 
-	// Hash password
 	pwHash, err := hashPassword(req.Password)
 	if err != nil {
 		return nil, errors.New("password_hash_failed")
@@ -116,22 +101,20 @@ func (s *partnerService) Signup(req SignupInput) (*SignupResponse, error) {
 
 	var resp *SignupResponse
 
-	err = executeTransaction(func(tx *gorm.DB) error {
-		// 1. Create partner
+	// ✅ USE SHARED TRANSACTION HELPER
+	err = database.ExecuteTransaction(func(tx *gorm.DB) error {
 		if err := s.partnerRepo.Create(tx, partner); err != nil {
 			return err
 		}
 
-		// 2. Generate OTP
 		code, err := generateOTP(6)
 		if err != nil {
 			return err
 		}
 
-		// 3. Save OTP (assuming OTP model supports OwnerType/OwnerID)
 		otp := &model.OTP{
 			OwnerID:   partner.ID,
-			OwnerType: "partner", // or model.OwnerTypePartner
+			OwnerType: model.OwnerTypePartner, // 👈 use typed constant
 			Code:      code,
 			Purpose:   "email_verification",
 			ExpiresAt: time.Now().Add(10 * time.Minute),

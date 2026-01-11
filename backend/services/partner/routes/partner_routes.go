@@ -21,5 +21,10 @@ func RegisterPartnerRoutes(app *fiber.App) {
 
 	// Public routes
 	v1.Post("/partners/signup", partnerCtrl.Signup)
-	// Later: v1.Post("/partners/verify-otp", ...)
+
+	// OTP endpoints
+	otpService := service.NewOTPService(partnerRepo, otpRepo)
+	otpCtrl := controller.NewOTPController(otpService)
+	v1.Post("/partners/verify-otp", otpCtrl.VerifyOTP)
+	v1.Post("/partners/resend-otp", otpCtrl.ResendOTP)
 }
