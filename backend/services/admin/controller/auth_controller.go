@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jafoor/carhub/libs/middleware"
 	"github.com/jafoor/carhub/libs/utils"
 	"github.com/jafoor/carhub/services/admin/service"
 )
@@ -71,4 +72,102 @@ func (ac *AuthController) RefreshToken(c *fiber.Ctx) error {
 	}
 
 	return utils.SuccessResponse(c, "Token refreshed", token)
+}
+
+type UpdateProfileRequest struct {
+	FirstName string  `json:"first_name"`
+	LastName  string  `json:"last_name"`
+	Phone     *string `json:"phone,omitempty"`
+}
+
+func (ac *AuthController) UpdateProfile(c *fiber.Ctx) error {
+	adminID, err := middleware.GetAdminID(c)
+	if err != nil {
+		return utils.ErrorResponse(c, http.StatusUnauthorized, "Admin authentication required", nil)
+	}
+
+	var req UpdateProfileRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.ErrorResponse(c, http.StatusBadRequest, "invalid request", nil)
+	}
+
+	input := service.UpdateProfileInput{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		Phone:     req.Phone,
+	}
+
+	profile, err := ac.service.UpdateProfile(adminID, input)
+	if err != nil {
+		switch err.Error() {
+		case "admin_not_found":
+			return utils.ErrorResponse(c, http.StatusNotFound, "Admin not found", nil)
+		case "failed_to_update_profile":
+			return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update profile", nil)
+		default:
+			return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update profile", nil)
+		}
+	}
+
+	return utils.SuccessResponse(c, "Profile updated successfully", profile)
+}
+
+type UpdatePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+func (ac *AuthController) UpdatePassword(c *fiber.Ctx) error {
+	adminID, err := middleware.GetAdminID(c)
+	if err != nil {
+		return utils.ErrorResponse(c, http.StatusUnauthorized, "Admin authentication required", nil)
+	}
+
+	var req UpdatePasswordRequest
+	if err := c.BodyParser(&req); err != nil {
+		return utils.ErrorResponse(c, http.StatusBadRequest, "invalid request", nil)
+	}
+
+	if req.CurrentPassword == "" || req.NewPassword == "" {
+		return utils.ErrorResponse(c, http.StatusBadRequest, "current_password and new_password are required", nil)
+	}
+
+	input := service.UpdatePasswordInput{
+		CurrentPassword: req.CurrentPassword,
+		NewPassword:     req.NewPassword,
+	}
+
+	if err := ac.service.UpdatePassword(adminID, input); err != nil {
+		switch err.Error() {
+		case "admin_not_found":
+			return utils.ErrorResponse(c, http.StatusNotFound, "Admin not found", nil)
+		case "invalid_current_password":
+			return utils.ErrorResponse(c, http.StatusBadRequest, "Current password is incorrect", nil)
+		case "weak_password":
+			return utils.ErrorResponse(c, http.StatusBadRequest, "Password does not meet requirements", nil)
+		default:
+			return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to update password", nil)
+		}
+	}
+
+	return utils.SuccessResponse(c, "Password updated successfully", nil)
+}
+
+func (ac *AuthController) GetProfile(c *fiber.Ctx) error {
+	adminID, err := middleware.GetAdminID(c)
+	if err != nil {
+		return utils.ErrorResponse(c, http.StatusUnauthorized, "Admin authentication required", nil)
+	}
+
+	profile, err := ac.service.GetProfile(adminID)
+	if err != nil {
+		switch err.Error() {
+		case "admin_not_found":
+			return utils.ErrorResponse(c, http.StatusNotFound, "Admin not found", nil)
+		default:
+			return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve profile", nil)
+		}
+	}
+
+	return utils.SuccessResponse(c, "Profile retrieved successfully", profile)
 }

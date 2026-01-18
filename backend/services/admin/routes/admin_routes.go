@@ -29,6 +29,10 @@ func RegisterAdminRoutes(app *fiber.App) {
 	// Protected admin routes group
 	adminGroup := v1.Group("/admin", middleware.RequireAdminAuth())
 
+	adminGroup.Get("/profile", authCtrl.GetProfile)
+	adminGroup.Put("/profile", authCtrl.UpdateProfile)
+	adminGroup.Put("/profile/password", authCtrl.UpdatePassword)
+
 	// RBAC endpoints (require super admin)
 	rbacService := service.NewRBACService(adminRepo, roleRepo, permissionRepo)
 	rbacCtrl := controller.NewRBACController(rbacService)

@@ -30,9 +30,33 @@ type TokenResponse struct {
 	Roles        []string `json:"roles"`
 }
 
+type AdminProfileResponse struct {
+	ID            uint    `json:"id"`
+	FirstName     string  `json:"first_name"`
+	LastName      string  `json:"last_name"`
+	Email         string  `json:"email"`
+	Phone         *string `json:"phone,omitempty"`
+	EmailVerified bool    `json:"email_verified"`
+	IsActive      bool    `json:"is_active"`
+}
+
+type UpdateProfileInput struct {
+	FirstName string  `json:"first_name"`
+	LastName  string  `json:"last_name"`
+	Phone     *string `json:"phone,omitempty"`
+}
+
+type UpdatePasswordInput struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
 type AuthService interface {
 	Signin(req SigninInput) (*TokenResponse, error)
 	RefreshToken(refreshToken string) (*TokenResponse, error)
+	GetProfile(adminID uint) (*AdminProfileResponse, error)
+	UpdateProfile(adminID uint, input UpdateProfileInput) (*AdminProfileResponse, error)
+	UpdatePassword(adminID uint, input UpdatePasswordInput) error
 }
 
 type authService struct {
@@ -48,6 +72,109 @@ func NewAuthService(
 		adminRepo:        adminRepo,
 		refreshTokenRepo: refreshTokenRepo,
 	}
+}
+
+func toAdminProfileResponse(admin *models.Admin) *AdminProfileResponse {
+	if admin == nil {
+		return nil
+	}
+	return &AdminProfileResponse{
+		ID:            admin.ID,
+		FirstName:     admin.FirstName,
+		LastName:      admin.LastName,
+		Email:         admin.Email,
+		Phone:         admin.Phone,
+		EmailVerified: admin.EmailVerified,
+		IsActive:      admin.IsActive,
+	}
+}
+
+func (s *authService) GetProfile(adminID uint) (*AdminProfileResponse, error) {
+	admin, err := s.adminRepo.FindByID(adminID)
+	if err != nil {
+		return nil, errors.New("failed_to_get_profile")
+	}
+	if admin == nil {
+		return nil, errors.New("admin_not_found")
+	}
+
+	return toAdminProfileResponse(admin), nil
+}
+
+func (s *authService) UpdateProfile(adminID uint, input UpdateProfileInput) (*AdminProfileResponse, error) {
+	admin, err := s.adminRepo.FindByID(adminID)
+	if err != nil {
+		return nil, errors.New("failed_to_update_profile")
+	}
+	if admin == nil {
+		return nil, errors.New("admin_not_found")
+	}
+
+	err = database.ExecuteTransaction(func(tx *gorm.DB) error {
+		if input.FirstName != "" {
+			admin.FirstName = input.FirstName
+		}
+		if input.LastName != "" {
+			admin.LastName = input.LastName
+		}
+		if input.Phone != nil {
+			admin.Phone = input.Phone
+		}
+		return s.adminRepo.Update(tx, admin)
+	})
+	if err != nil {
+		return nil, errors.New("failed_to_update_profile")
+	}
+
+	return toAdminProfileResponse(admin), nil
+}
+
+func (s *authService) UpdatePassword(adminID uint, input UpdatePasswordInput) error {
+	admin, err := s.adminRepo.FindByID(adminID)
+	if err != nil {
+		return errors.New("update_password_failed")
+	}
+	if admin == nil {
+		return errors.New("admin_not_found")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(admin.PasswordHash), []byte(input.CurrentPassword)); err != nil {
+		return errors.New("invalid_current_password")
+	}
+
+	if len(input.NewPassword) < 8 {
+		return errors.New("weak_password")
+	}
+	if input.NewPassword == input.CurrentPassword {
+		return errors.New("weak_password")
+	}
+
+	now := time.Now()
+	newHash, err := bcrypt.GenerateFromPassword([]byte(input.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return errors.New("update_password_failed")
+	}
+
+	err = database.ExecuteTransaction(func(tx *gorm.DB) error {
+		admin.PasswordHash = string(newHash)
+		admin.PasswordChanged = true
+		admin.LastPasswordChange = &now
+
+		if err := s.refreshTokenRepo.DeleteByAdminID(tx, admin.ID); err != nil {
+			return err
+		}
+
+		if err := s.adminRepo.Update(tx, admin); err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return errors.New("update_password_failed")
+	}
+
+	return nil
 }
 
 // hashToken creates SHA256 hash of token for secure storage
