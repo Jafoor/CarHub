@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/jafoor/carhub/libs/database" // ← for ExecuteTransaction & DB
-	model "github.com/jafoor/carhub/libs/models"
+	"github.com/jafoor/carhub/libs/models"
 	otpRepository "github.com/jafoor/carhub/libs/repository"
 	"github.com/jafoor/carhub/services/partner/repository"
 	"golang.org/x/crypto/bcrypt"
@@ -75,7 +75,7 @@ func (s *partnerService) Signup(req SignupInput) (*SignupResponse, error) {
 	}
 
 	if existing != nil {
-		if existing.Status == model.StatusUnverified && !existing.EmailVerified {
+		if existing.Status == models.StatusUnverified && !existing.EmailVerified {
 			return &SignupResponse{
 				Email:      email,
 				NextAction: "verify_otp",
@@ -89,13 +89,13 @@ func (s *partnerService) Signup(req SignupInput) (*SignupResponse, error) {
 		return nil, errors.New("password_hash_failed")
 	}
 
-	partner := &model.Partner{
+	partner := &models.Partner{
 		FirstName:    req.FirstName,
 		LastName:     req.LastName,
 		Email:        email,
 		Phone:        req.Phone,
 		PasswordHash: pwHash,
-		Status:       model.StatusUnverified,
+		Status:       models.StatusUnverified,
 		EmailVerified: false,
 	}
 
@@ -112,9 +112,9 @@ func (s *partnerService) Signup(req SignupInput) (*SignupResponse, error) {
 			return err
 		}
 
-		otp := &model.OTP{
+		otp := &models.OTP{
 			OwnerID:   partner.ID,
-			OwnerType: model.OwnerTypePartner, // 👈 use typed constant
+			OwnerType: models.OwnerTypePartner, // 👈 use typed constant
 			Code:      code,
 			Purpose:   "email_verification",
 			ExpiresAt: time.Now().Add(10 * time.Minute),

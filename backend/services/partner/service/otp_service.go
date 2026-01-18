@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/jafoor/carhub/libs/database" // ← for ExecuteTransaction & ReadDB
-	model "github.com/jafoor/carhub/libs/models"
+	"github.com/jafoor/carhub/libs/models"
 	otpRepository "github.com/jafoor/carhub/libs/repository"
 	"github.com/jafoor/carhub/services/partner/repository"
 	"gorm.io/gorm"
@@ -55,7 +55,7 @@ func (s *otpService) VerifyOTP(email, otpCode string) error {
 
 	otp, err := s.otpRepo.FindValidOTP(
 		partner.ID,
-		model.OwnerTypePartner,
+		models.OwnerTypePartner,
 		otpCode,
 		"email_verification",
 	)
@@ -88,9 +88,9 @@ func (s *otpService) ResendOTP(email string) error {
 	}
 
 	var count int64
-	err = database.ReadDB.Model(&model.OTP{}). // 👈 use shared ReadDB
+	err = database.ReadDB.Model(&models.OTP{}). // 👈 use shared ReadDB
 		Where("owner_id = ? AND owner_type = ? AND purpose = ? AND used = ? AND expires_at > ?",
-			partner.ID, model.OwnerTypePartner, "email_verification", false, time.Now()).
+			partner.ID, models.OwnerTypePartner, "email_verification", false, time.Now()).
 		Count(&count).Error
 
 	if err != nil {
@@ -106,9 +106,9 @@ func (s *otpService) ResendOTP(email string) error {
 		return errors.New("otp_generation_failed")
 	}
 
-	otp := &model.OTP{
+	otp := &models.OTP{
 		OwnerID:   partner.ID,
-		OwnerType: model.OwnerTypePartner,
+		OwnerType: models.OwnerTypePartner,
 		Code:      code,
 		Purpose:   "email_verification",
 		ExpiresAt: time.Now().Add(10 * time.Minute),

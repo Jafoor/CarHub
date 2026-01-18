@@ -44,6 +44,13 @@ clean:
 	@rm -rf bin
 	@echo "$(GREEN)✅ Cleaned.$(NC)"
 
+deps:
+	@echo "$(YELLOW)📦 Downloading Go dependencies...$(NC)"
+	@go mod download
+	@go mod tidy
+	@echo "$(GREEN)✅ Dependencies installed.$(NC)"
+
+
 # ================================
 # 🗄️ Database Migrations
 # ================================
@@ -93,6 +100,23 @@ docker-down:
 	@docker compose down
 
 # ================================
+# 👤 Admin Management
+# ================================
+
+create-super-admin:
+	@echo "$(YELLOW)👤 Creating super admin...$(NC)"
+	@go run ./infrastructure/scripts/create_super_admin.go
+
+create-super-admin-args:
+	@echo "$(YELLOW)👤 Creating super admin with provided arguments...$(NC)"
+	@go run ./infrastructure/scripts/create_super_admin.go \
+		-email="$(email)" \
+		-password="$(password)" \
+		-first-name="$(first_name)" \
+		-last-name="$(last_name)" \
+		-phone="$(phone)"
+
+# ================================
 # 💡 Utility
 # ================================
 
@@ -107,3 +131,5 @@ help:
 	@echo "  make test               - Run tests"
 	@echo "  make docker-up          - Start PostgreSQL in Docker"
 	@echo "  make docker-down        - Stop PostgreSQL container"
+	@echo "  make create-super-admin - Create super admin (interactive)"
+	@echo "  make create-super-admin-args email=<email> password=<pass> first_name=<name> last_name=<name> [phone=<phone>] - Create super admin with args"

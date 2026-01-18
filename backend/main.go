@@ -9,6 +9,7 @@ import (
 	"github.com/jafoor/carhub/libs/database"
 	"github.com/jafoor/carhub/libs/logger"
 	"github.com/jafoor/carhub/libs/middleware"
+	adminRoutes "github.com/jafoor/carhub/services/admin/routes"
 	partnerRoutes "github.com/jafoor/carhub/services/partner/routes"
 )
 
@@ -38,6 +39,7 @@ func main() {
 	})
 
 	partnerRoutes.RegisterPartnerRoutes(app)
+	adminRoutes.RegisterAdminRoutes(app)
 
 	port := config.App.ServerPort
 	logger.Log.Info().Msgf("Server running on port %s", port)

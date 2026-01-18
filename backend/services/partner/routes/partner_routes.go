@@ -15,6 +15,7 @@ func RegisterPartnerRoutes(app *fiber.App) {
 	// Dependencies
 	partnerRepo := repository.NewPartnerRepository()
 	otpRepo := otpRepository.NewOTPRepository()
+	refreshTokenRepo := otpRepository.NewPartnerRefreshTokenRepository()
 
 	partnerService := service.NewPartnerService(partnerRepo, otpRepo)
 	partnerCtrl := controller.NewPartnerController(partnerService)
@@ -27,4 +28,11 @@ func RegisterPartnerRoutes(app *fiber.App) {
 	otpCtrl := controller.NewOTPController(otpService)
 	v1.Post("/partners/verify-otp", otpCtrl.VerifyOTP)
 	v1.Post("/partners/resend-otp", otpCtrl.ResendOTP)
+
+	// Add to RegisterPartnerRoutes
+	authService := service.NewAuthService(partnerRepo, refreshTokenRepo)
+	authCtrl := controller.NewAuthController(authService)
+
+	v1.Post("/partners/signin", authCtrl.Signin)
+	v1.Post("/partners/refresh", authCtrl.RefreshToken)
 }
