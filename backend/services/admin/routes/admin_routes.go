@@ -38,8 +38,18 @@ func RegisterAdminRoutes(app *fiber.App) {
 	rbacCtrl := controller.NewRBACController(rbacService)
 
 	// RBAC management routes (super admin only)
+	adminGroup.Get("/roles", middleware.RequireSuperAdmin(), rbacCtrl.ListRoles)
+	adminGroup.Post("/roles", middleware.RequireSuperAdmin(), rbacCtrl.CreateRole)
+	adminGroup.Get("/roles/:roleId", middleware.RequireSuperAdmin(), rbacCtrl.GetRole)
+	adminGroup.Put("/roles/:roleId", middleware.RequireSuperAdmin(), rbacCtrl.UpdateRole)
+	adminGroup.Delete("/roles/:roleId", middleware.RequireSuperAdmin(), rbacCtrl.DeleteRole)
 	adminGroup.Post("/roles/assign", middleware.RequireSuperAdmin(), rbacCtrl.AssignRoleToAdmin)
 	adminGroup.Post("/permissions/assign", middleware.RequireSuperAdmin(), rbacCtrl.AssignPermissionToRole)
 	adminGroup.Get("/:adminId/roles", middleware.RequireSuperAdmin(), rbacCtrl.GetAdminRoles)
 	adminGroup.Get("/roles/:roleId/permissions", middleware.RequireSuperAdmin(), rbacCtrl.GetRolePermissions)
+	adminGroup.Get("/permissions", middleware.RequireSuperAdmin(), rbacCtrl.ListPermissions)
+	adminGroup.Post("/permissions", middleware.RequireSuperAdmin(), rbacCtrl.CreatePermission)
+	adminGroup.Get("/permissions/:permissionId", middleware.RequireSuperAdmin(), rbacCtrl.GetPermission)
+	adminGroup.Put("/permissions/:permissionId", middleware.RequireSuperAdmin(), rbacCtrl.UpdatePermission)
+	adminGroup.Delete("/permissions/:permissionId", middleware.RequireSuperAdmin(), rbacCtrl.DeletePermission)
 }

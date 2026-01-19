@@ -11,6 +11,8 @@ type AdminRoleRepository interface {
 	FindAll() ([]models.AdminRole, error)
 	FindByID(id uint) (*models.AdminRole, error)
 	FindByName(name string) (*models.AdminRole, error)
+	Update(tx *gorm.DB, role *models.AdminRole) error
+	Delete(tx *gorm.DB, id uint) error
 }
 
 type adminRoleRepository struct{}
@@ -51,4 +53,12 @@ func (r *adminRoleRepository) FindByName(name string) (*models.AdminRole, error)
 		return nil, err
 	}
 	return &role, nil
+}
+
+func (r *adminRoleRepository) Update(tx *gorm.DB, role *models.AdminRole) error {
+	return tx.Save(role).Error
+}
+
+func (r *adminRoleRepository) Delete(tx *gorm.DB, id uint) error {
+	return tx.Delete(&models.AdminRole{}, id).Error
 }

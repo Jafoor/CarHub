@@ -9,10 +9,13 @@ import (
 type AdminPermissionRepository interface {
 	Create(tx *gorm.DB, permission *models.AdminPermission) error
 	FindAll() ([]models.AdminPermission, error)
+	FindByID(id uint) (*models.AdminPermission, error)
 	FindByName(name string) (*models.AdminPermission, error)
 	AssignPermissionToRole(tx *gorm.DB, roleID, permissionID uint) error
 	GetRolePermissions(roleID uint) ([]models.AdminPermission, error)
 	HasPermission(adminID uint, permissionName string) (bool, error)
+	Update(tx *gorm.DB, permission *models.AdminPermission) error
+	Delete(tx *gorm.DB, id uint) error
 }
 
 type adminPermissionRepository struct{}
@@ -29,6 +32,18 @@ func (r *adminPermissionRepository) FindAll() ([]models.AdminPermission, error) 
 	var permissions []models.AdminPermission
 	err := database.ReadDB.Find(&permissions).Error
 	return permissions, err
+}
+
+func (r *adminPermissionRepository) FindByID(id uint) (*models.AdminPermission, error) {
+	var permission models.AdminPermission
+	err := database.ReadDB.First(&permission, id).Error
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &permission, nil
 }
 
 func (r *adminPermissionRepository) FindByName(name string) (*models.AdminPermission, error) {
@@ -48,7 +63,18 @@ func (r *adminPermissionRepository) AssignPermissionToRole(tx *gorm.DB, roleID, 
 		RoleID       uint `gorm:"primaryKey"`
 		PermissionID uint `gorm:"primaryKey"`
 	}
-	return tx.Create(&RolePermission{RoleID: roleID, PermissionID: permissionID}).Error
+	return tx.Table("admin_role_permissions").Create(&RolePermission{
+		RoleID:       roleID,
+		PermissionID: permissionID,
+	}).Error
+}
+
+func (r *adminPermissionRepository) Update(tx *gorm.DB, permission *models.AdminPermission) error {
+	return tx.Save(permission).Error
+}
+
+func (r *adminPermissionRepository) Delete(tx *gorm.DB, id uint) error {
+	return tx.Delete(&models.AdminPermission{}, id).Error
 }
 
 func (r *adminPermissionRepository) GetRolePermissions(roleID uint) ([]models.AdminPermission, error) {

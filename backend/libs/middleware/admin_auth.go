@@ -112,6 +112,33 @@ func RequirePermission(permissionName string) fiber.Handler {
 	}
 }
 
+func RequireSectionPermission(section string, action string) fiber.Handler {
+	permissionRepo := repository.NewAdminPermissionRepository()
+
+	return func(c *fiber.Ctx) error {
+		adminID, ok := c.Locals(AdminIDKey).(uint)
+		if !ok {
+			return utils.ErrorResponse(c, http.StatusUnauthorized, "Admin authentication required", nil)
+		}
+
+		permissionName := section
+		if action != "" {
+			permissionName = section + "." + action
+		}
+
+		hasPermission, err := permissionRepo.HasPermission(adminID, permissionName)
+		if err != nil {
+			return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to check permission", nil)
+		}
+
+		if !hasPermission {
+			return utils.ErrorResponse(c, http.StatusForbidden, "Insufficient permissions", nil)
+		}
+
+		return c.Next()
+	}
+}
+
 // GetAdminID extracts admin ID from context
 func GetAdminID(c *fiber.Ctx) (uint, error) {
 	adminID, ok := c.Locals(AdminIDKey).(uint)
