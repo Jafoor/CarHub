@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,10 +16,8 @@ const (
 	AdminClaimsKey = "admin_claims"
 )
 
-// RequireAdminAuth validates admin JWT token and checks if admin is active
+// RequireAdminAuth validates admin JWT token
 func RequireAdminAuth() fiber.Handler {
-	adminRepo := repository.NewAdminRepository()
-
 	return func(c *fiber.Ctx) error {
 		// Extract token from Authorization header
 		authHeader := c.Get("Authorization")
@@ -40,16 +39,6 @@ func RequireAdminAuth() fiber.Handler {
 			return utils.ErrorResponse(c, http.StatusUnauthorized, "Invalid or expired token", nil)
 		}
 
-		// Check if admin exists and is active
-		admin, err := adminRepo.FindByID(claims.AdminID)
-		if err != nil || admin == nil {
-			return utils.ErrorResponse(c, http.StatusUnauthorized, "Admin not found", nil)
-		}
-
-		if !admin.IsActive {
-			return utils.ErrorResponse(c, http.StatusForbidden, "Admin account is inactive", nil)
-		}
-
 		// Store admin info in context for downstream handlers
 		c.Locals(AdminIDKey, claims.AdminID)
 		c.Locals(AdminClaimsKey, claims)
@@ -58,31 +47,50 @@ func RequireAdminAuth() fiber.Handler {
 	}
 }
 
-// RequireSuperAdmin checks if admin has super_admin role
+// RequireSuperAdmin checks if admin has super_admin role using JWT claims
 func RequireSuperAdmin() fiber.Handler {
-	adminRepo := repository.NewAdminRepository()
-
 	return func(c *fiber.Ctx) error {
-		// First ensure admin is authenticated
-		adminID, ok := c.Locals(AdminIDKey).(uint)
-		if !ok {
+		// Get admin claims
+		claims, err := GetAdminClaims(c)
+		if err != nil {
 			return utils.ErrorResponse(c, http.StatusUnauthorized, "Admin authentication required", nil)
 		}
 
-		// Get admin roles
-		roles, err := adminRepo.GetAdminRoles(adminID)
-		if err != nil {
-			return utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve admin roles", nil)
-		}
-
 		// Check if admin has super_admin role
-		for _, role := range roles {
-			if role.IsSuperAdmin || role.Name == "super_admin" {
+		for _, role := range claims.Roles {
+			if role == "super_admin" {
 				return c.Next()
 			}
 		}
 
 		return utils.ErrorResponse(c, http.StatusForbidden, "Super admin access required", nil)
+	}
+}
+
+// RequireRoles checks if admin has at least one of the allowed roles
+// Super admins automatically pass
+func RequireRoles(allowedRoles ...string) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		// Get admin claims
+		claims, err := GetAdminClaims(c)
+		if err != nil {
+			return utils.ErrorResponse(c, http.StatusUnauthorized, "Admin authentication required", nil)
+		}
+
+		// Check for super_admin or allowed roles
+		for _, userRole := range claims.Roles {
+			// Super admin bypass
+			if userRole == "super_admin" {
+				return c.Next()
+			}
+			
+			// Check against allowed roles
+			if slices.Contains(allowedRoles, userRole) {
+					return c.Next()
+				}
+		}
+
+		return utils.ErrorResponse(c, http.StatusForbidden, "Insufficient role permissions", nil)
 	}
 }
 
