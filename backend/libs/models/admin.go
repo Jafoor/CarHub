@@ -20,6 +20,9 @@ type Admin struct {
 	LastPasswordChange   *time.Time `json:"-"`
 	LastLoginAt          *time.Time `json:"last_login_at,omitempty"`
 	
+	// Associations
+	Roles                []AdminRole `gorm:"many2many:admin_user_roles;joinForeignKey:admin_id;joinReferences:role_id" json:"roles,omitempty"`
+
 	CreatedAt            time.Time `json:"created_at"`
 	UpdatedAt            time.Time `json:"updated_at"`
 	DeletedAt            gorm.DeletedAt `gorm:"index" json:"-"`

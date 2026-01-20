@@ -31,7 +31,7 @@ type CreateAdminInput struct {
 	Email     string  `json:"email"`
 	Phone     *string `json:"phone,omitempty"`
 	Password  string  `json:"password"`
-	RoleID    uint    `json:"role_id"`
+	RoleIDs   []uint  `json:"role_ids"`
 }
 
 type UpdateAdminUserInput struct {
@@ -39,6 +39,7 @@ type UpdateAdminUserInput struct {
 	LastName  string  `json:"last_name"`
 	Phone     *string `json:"phone"`
 	IsActive  *bool   `json:"is_active"`
+	RoleIDs   []uint  `json:"role_ids"`
 }
 
 // CreateAdminUser creates a new admin user
@@ -48,7 +49,7 @@ func (c *AdminUserController) CreateAdminUser(ctx *fiber.Ctx) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid input", err)
 	}
 
-	if input.FirstName == "" || input.LastName == "" || input.Email == "" || input.Password == "" || input.RoleID == 0 {
+	if input.FirstName == "" || input.LastName == "" || input.Email == "" || input.Password == "" || len(input.RoleIDs) == 0 {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Missing required fields", nil)
 	}
 	
@@ -57,7 +58,7 @@ func (c *AdminUserController) CreateAdminUser(ctx *fiber.Ctx) error {
 	}
 
 	// Check if email already exists
-	existing, err := c.repo.FindByEmail(input.Email)
+	existing, err := c.repo.FindByEmailUnscoped(input.Email)
 	if err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Database error", err)
 	}
@@ -88,15 +89,17 @@ func (c *AdminUserController) CreateAdminUser(ctx *fiber.Ctx) error {
 			return err
 		}
 
-		// Assign Role
-		// Verify role exists
-		role, err := c.roleRepo.FindByID(input.RoleID)
-		if err != nil || role == nil {
-			return fiber.NewError(http.StatusBadRequest, "Invalid Role ID")
-		}
+		// Assign Roles
+		for _, roleID := range input.RoleIDs {
+			// Verify role exists
+			role, err := c.roleRepo.FindByID(roleID)
+			if err != nil || role == nil {
+				return fiber.NewError(http.StatusBadRequest, "Invalid Role ID: "+strconv.Itoa(int(roleID)))
+			}
 
-		if err := c.repo.AssignRoleToAdmin(tx, admin.ID, input.RoleID); err != nil {
-			return err
+			if err := c.repo.AssignRoleToAdmin(tx, admin.ID, roleID); err != nil {
+				return err
+			}
 		}
 
 		return nil
@@ -116,6 +119,8 @@ func (c *AdminUserController) ListAdminUsers(ctx *fiber.Ctx) error {
 	search := ctx.Query("search", "")
 	email := ctx.Query("email", "")
 	phone := ctx.Query("phone", "")
+	isActive := ctx.Query("is_active")
+	roleID := ctx.Query("role_id")
 
 	if page < 1 {
 		page = 1
@@ -131,6 +136,18 @@ func (c *AdminUserController) ListAdminUsers(ctx *fiber.Ctx) error {
 	}
 	if phone != "" {
 		filters["phone"] = phone
+	}
+	if isActive != "" {
+		active, err := strconv.ParseBool(isActive)
+		if err == nil {
+			filters["is_active"] = active
+		}
+	}
+	if roleID != "" {
+		id, err := strconv.Atoi(roleID)
+		if err == nil {
+			filters["role_id"] = uint(id)
+		}
 	}
 
 	admins, total, err := c.repo.List(offset, limit, filters, search)
@@ -181,6 +198,23 @@ func (c *AdminUserController) UpdateAdminUser(ctx *fiber.Ctx) error {
 		}
 		if input.IsActive != nil {
 			admin.IsActive = *input.IsActive
+		}
+
+		if len(input.RoleIDs) > 0 {
+			// Clear existing roles
+			if err := c.repo.ClearAdminRoles(tx, admin.ID); err != nil {
+				return err
+			}
+			// Assign new roles
+			for _, roleID := range input.RoleIDs {
+				role, err := c.roleRepo.FindByID(roleID)
+				if err != nil || role == nil {
+					return fiber.NewError(http.StatusBadRequest, "Invalid Role ID: "+strconv.Itoa(int(roleID)))
+				}
+				if err := c.repo.AssignRoleToAdmin(tx, admin.ID, roleID); err != nil {
+					return err
+				}
+			}
 		}
 
 		return c.repo.Update(tx, admin)
