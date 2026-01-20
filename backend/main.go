@@ -24,7 +24,7 @@ func main() {
 	app := fiber.New()
 
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "http://localhost:3000, http://127.0.0.1:3000", // Your Next.js frontend URL
+		AllowOrigins:     "http://localhost:3000, http://localhost:3001, http://127.0.0.1:3001", // Your Next.js frontend URL
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization, X-Requested-With",
 		AllowCredentials: true,
