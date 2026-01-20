@@ -31,13 +31,14 @@ type TokenResponse struct {
 }
 
 type AdminProfileResponse struct {
-	ID            uint    `json:"id"`
-	FirstName     string  `json:"first_name"`
-	LastName      string  `json:"last_name"`
-	Email         string  `json:"email"`
-	Phone         *string `json:"phone,omitempty"`
-	EmailVerified bool    `json:"email_verified"`
-	IsActive      bool    `json:"is_active"`
+	ID              uint    `json:"id"`
+	FirstName       string  `json:"first_name"`
+	LastName        string  `json:"last_name"`
+	Email           string  `json:"email"`
+	Phone           *string `json:"phone,omitempty"`
+	EmailVerified   bool    `json:"email_verified"`
+	IsActive        bool    `json:"is_active"`
+	PasswordChanged bool    `json:"password_changed"`
 }
 
 type UpdateProfileInput struct {
@@ -79,13 +80,14 @@ func toAdminProfileResponse(admin *models.Admin) *AdminProfileResponse {
 		return nil
 	}
 	return &AdminProfileResponse{
-		ID:            admin.ID,
-		FirstName:     admin.FirstName,
-		LastName:      admin.LastName,
-		Email:         admin.Email,
-		Phone:         admin.Phone,
-		EmailVerified: admin.EmailVerified,
-		IsActive:      admin.IsActive,
+		ID:              admin.ID,
+		FirstName:       admin.FirstName,
+		LastName:        admin.LastName,
+		Email:           admin.Email,
+		Phone:           admin.Phone,
+		EmailVerified:   admin.EmailVerified,
+		IsActive:        admin.IsActive,
+		PasswordChanged: admin.PasswordChanged,
 	}
 }
 

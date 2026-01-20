@@ -16,7 +16,7 @@ type Admin struct {
 	
 	EmailVerified        bool      `gorm:"default:true;not null" json:"email_verified"`
 	IsActive             bool      `gorm:"default:true;not null" json:"is_active"`
-	PasswordChanged      bool      `gorm:"default:false;not null" json:"-"`
+	PasswordChanged      bool      `gorm:"default:false;not null" json:"password_changed"`
 	LastPasswordChange   *time.Time `json:"-"`
 	LastLoginAt          *time.Time `json:"last_login_at,omitempty"`
 	

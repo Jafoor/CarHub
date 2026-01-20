@@ -52,4 +52,11 @@ func RegisterAdminRoutes(app *fiber.App) {
 	adminGroup.Get("/permissions/:permissionId", middleware.RequireSuperAdmin(), rbacCtrl.GetPermission)
 	adminGroup.Put("/permissions/:permissionId", middleware.RequireSuperAdmin(), rbacCtrl.UpdatePermission)
 	adminGroup.Delete("/permissions/:permissionId", middleware.RequireSuperAdmin(), rbacCtrl.DeletePermission)
+
+	// User Management (Admin or Super Admin)
+	userCtrl := controller.NewAdminUserController()
+	adminGroup.Post("/users", middleware.RequireRoles("super_admin", "admin"), userCtrl.CreateAdminUser)
+	adminGroup.Get("/users", middleware.RequireRoles("super_admin", "admin"), userCtrl.ListAdminUsers)
+	adminGroup.Put("/users/:id", middleware.RequireRoles("super_admin", "admin"), userCtrl.UpdateAdminUser)
+	adminGroup.Delete("/users/:id", middleware.RequireRoles("super_admin", "admin"), userCtrl.DeleteAdminUser)
 }
