@@ -61,18 +61,8 @@ const sidebarItems: SidebarItem[] = [
     roles: ["super_admin", "admin"],
     children: [
       {
-        title: "Regions",
-        href: "/dashboard/settings/regions",
-        roles: ["super_admin", "admin"],
-      },
-      {
-        title: "Cities",
-        href: "/dashboard/settings/cities",
-        roles: ["super_admin", "admin"],
-      },
-      {
-        title: "Areas",
-        href: "/dashboard/settings/areas",
+        title: "Address Management",
+        href: "/dashboard/settings/address-management",
         roles: ["super_admin", "admin"],
       },
     ],

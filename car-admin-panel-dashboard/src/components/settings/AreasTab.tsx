@@ -257,9 +257,9 @@ function DeleteConfirmationModal({
   );
 }
 
-// --- Main Page ---
+// --- Main Component ---
 
-export default function AreasPage() {
+export function AreasTab() {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -363,12 +363,8 @@ export default function AreasPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Areas</h1>
-          <p className="text-muted-foreground">Manage system areas</p>
-        </div>
+    <div className="space-y-6">
+      <div className="flex justify-end">
         <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="mr-2 h-4 w-4" /> Add Area
         </Button>
