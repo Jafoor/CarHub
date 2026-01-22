@@ -82,7 +82,7 @@ export const authApi = {
     },
   ): Promise<ProfileResponse> => {
     const response = await apiClient.put<ApiResponse<ProfileResponse>>(
-      "/profile",
+      "/admin/profile",
       payload,
     );
     return response.data.data;
@@ -92,7 +92,7 @@ export const authApi = {
     current_password: string;
     new_password: string;
   }): Promise<void> => {
-    await apiClient.put("/profile/password", payload);
+    await apiClient.put("/admin/profile/password", payload);
   },
 
   signUp: async (credentials: SignUpCredentials): Promise<AuthResponse> => {

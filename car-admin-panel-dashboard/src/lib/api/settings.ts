@@ -38,12 +38,23 @@ export interface VehicleType {
   created_at: string;
 }
 
+export interface VehicleBrand {
+  id: number;
+  name: string;
+  display_name: string;
+  vehicle_type_id: number;
+  vehicle_type?: VehicleType;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface SettingsListParams {
   page?: number;
   limit?: number;
   search?: string;
   region_id?: number;
   city_id?: number;
+  vehicle_type_id?: number;
 }
 
 export interface SettingsListResponse<T> {
@@ -215,6 +226,46 @@ export const settingsApi = {
   },
   deleteVehicleType: async (id: number) => {
     const { data } = await apiClient.delete(`/settings/vehicle-types/${id}`);
+    return data;
+  },
+
+  // Vehicle Brands
+  getVehicleBrands: async (params?: SettingsListParams) => {
+    const { data } = await apiClient.get<SettingsListResponse<VehicleBrand>>(
+      "/settings/vehicle-brands",
+      { params },
+    );
+    return data;
+  },
+  createVehicleBrand: async (payload: {
+    name: string;
+    display_name: string;
+    vehicle_type_id: number;
+    is_active: boolean;
+  }) => {
+    const { data } = await apiClient.post<SingleResponse<VehicleBrand>>(
+      "/settings/vehicle-brands",
+      payload,
+    );
+    return data;
+  },
+  updateVehicleBrand: async (
+    id: number,
+    payload: {
+      name?: string;
+      display_name?: string;
+      vehicle_type_id?: number;
+      is_active?: boolean;
+    },
+  ) => {
+    const { data } = await apiClient.put<SingleResponse<VehicleBrand>>(
+      `/settings/vehicle-brands/${id}`,
+      payload,
+    );
+    return data;
+  },
+  deleteVehicleBrand: async (id: number) => {
+    const { data } = await apiClient.delete(`/settings/vehicle-brands/${id}`);
     return data;
   },
 };

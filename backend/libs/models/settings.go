@@ -27,6 +27,18 @@ type VehicleType struct {
 	DeletedAt   gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
+type VehicleBrand struct {
+	ID            uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	Name          string         `gorm:"size:100;uniqueIndex;not null" json:"name"`
+	DisplayName   string         `gorm:"size:100;not null" json:"display_name"`
+	VehicleTypeID uint           `gorm:"not null" json:"vehicle_type_id"`
+	VehicleType   *VehicleType   `json:"vehicle_type,omitempty"`
+	IsActive      bool           `gorm:"default:true;not null" json:"is_active"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+}
+
 type City struct {
 	ID          uint           `gorm:"primaryKey;autoIncrement" json:"id"`
 	Name        string         `gorm:"size:100;uniqueIndex;not null" json:"name"`

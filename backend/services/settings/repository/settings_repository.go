@@ -37,6 +37,14 @@ type SettingsRepository interface {
 	UpdateVehicleType(tx *gorm.DB, vehicleType *models.VehicleType) error
 	DeleteVehicleType(tx *gorm.DB, id uint) error
 	ListVehicleTypes(offset, limit int, search string) ([]models.VehicleType, int64, error)
+
+	// VehicleBrand
+	CreateVehicleBrand(tx *gorm.DB, vehicleBrand *models.VehicleBrand) error
+	GetVehicleBrand(id uint) (*models.VehicleBrand, error)
+	UpdateVehicleBrand(tx *gorm.DB, vehicleBrand *models.VehicleBrand) error
+	DeleteVehicleBrand(tx *gorm.DB, id uint) error
+	ListVehicleBrands(offset, limit int, search string, vehicleTypeID *uint) ([]models.VehicleBrand, int64, error)
+	GetVehicleBrandsByVehicleType(vehicleTypeID uint) ([]models.VehicleBrand, error)
 }
 
 type settingsRepository struct{}
