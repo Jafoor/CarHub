@@ -10,7 +10,7 @@ DB_USER=postgres
 DB_PASSWORD=12345678
 DB_NAME=car-management
 DB_HOST=localhost
-DB_PORT=5433
+DB_PORT=5432
 DB_SSL=disable
 
 MIGRATIONS_DIR=./migrations

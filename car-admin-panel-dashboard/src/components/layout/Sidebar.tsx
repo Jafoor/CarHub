@@ -58,8 +58,24 @@ const sidebarItems: SidebarItem[] = [
   {
     title: "Settings",
     icon: <Settings className="h-4 w-4" />,
-    href: "/dashboard/settings",
     roles: ["super_admin", "admin"],
+    children: [
+      {
+        title: "Regions",
+        href: "/dashboard/settings/regions",
+        roles: ["super_admin", "admin"],
+      },
+      {
+        title: "Cities",
+        href: "/dashboard/settings/cities",
+        roles: ["super_admin", "admin"],
+      },
+      {
+        title: "Areas",
+        href: "/dashboard/settings/areas",
+        roles: ["super_admin", "admin"],
+      },
+    ],
   },
 ];
 
@@ -135,6 +151,7 @@ function SidebarItem({
         </Link>
       ) : (
         <button
+          type="button"
           onClick={() => setIsManuallyOpen(!isManuallyOpen)}
           className={cn(
             "flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
@@ -165,7 +182,13 @@ function SidebarItem({
             if (child.roles && !checkAccess(child.roles)) {
               return null;
             }
-            return <SidebarItem key={index} item={child} level={level + 1} />;
+            return (
+              <SidebarItem
+                key={child.href || child.title}
+                item={child}
+                level={level + 1}
+              />
+            );
           })}
         </div>
       )}
@@ -205,7 +228,7 @@ export function Sidebar() {
         </div>
         <nav className="flex-1 space-y-1 overflow-y-auto p-4">
           {sidebarItems.map((item, index) => (
-            <SidebarItem key={index} item={item} />
+            <SidebarItem key={item.href || item.title} item={item} />
           ))}
         </nav>
       </div>

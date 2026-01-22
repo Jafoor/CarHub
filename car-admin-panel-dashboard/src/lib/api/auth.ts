@@ -29,7 +29,7 @@ type ProfileResponse = {
 export const authApi = {
   signIn: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await apiClient.post<ApiResponse<AuthTokensResponse>>(
-      "/signin",
+      "/admin/signin",
       credentials,
     );
 
@@ -122,7 +122,7 @@ export const authApi = {
     refreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string }> => {
     const response = await apiClient.post<ApiResponse<AuthTokensResponse>>(
-      "/refresh",
+      "/admin/refresh",
       { refresh_token: refreshToken },
     );
 

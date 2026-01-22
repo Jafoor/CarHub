@@ -58,27 +58,33 @@ export interface AdminListResponse {
 
 export const adminsApi = {
   getAll: async (params?: AdminListParams): Promise<AdminListResponse> => {
-    const response = await apiClient.get<ApiResponse<AdminListResponse>>("/users", {
-      params,
-    });
+    const response = await apiClient.get<ApiResponse<AdminListResponse>>(
+      "/admin/users",
+      {
+        params,
+      },
+    );
     return response.data.data;
   },
 
   create: async (payload: CreateAdminPayload): Promise<AdminUser> => {
-    const response = await apiClient.post<ApiResponse<AdminUser>>("/users", payload);
+    const response = await apiClient.post<ApiResponse<AdminUser>>(
+      "/admin/users",
+      payload,
+    );
     return response.data.data;
   },
 
   update: async (id: number, payload: UpdateAdminPayload): Promise<AdminUser> => {
     // Backend API uses PUT for update
     const response = await apiClient.put<ApiResponse<AdminUser>>(
-      `/users/${id}`,
+      `/admin/users/${id}`,
       payload,
     );
     return response.data.data;
   },
 
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/users/${id}`);
+    await apiClient.delete(`/admin/users/${id}`);
   },
 };

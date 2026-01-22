@@ -22,7 +22,7 @@ export type UpdateRolePayload = Partial<CreateRolePayload>;
 export const rolesApi = {
   getAll: async (): Promise<Role[]> => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const response = await apiClient.get<any>("/roles");
+    const response = await apiClient.get<any>("/admin/roles");
     console.log("Roles API Response Full:", response);
 
     // Handle different response structures
@@ -40,24 +40,29 @@ export const rolesApi = {
   },
 
   getById: async (id: number): Promise<Role> => {
-    const response = await apiClient.get<ApiResponse<Role>>(`/roles/${id}`);
+    const response = await apiClient.get<ApiResponse<Role>>(
+      `/admin/roles/${id}`,
+    );
     return response.data.data;
   },
 
   create: async (payload: CreateRolePayload): Promise<Role> => {
-    const response = await apiClient.post<ApiResponse<Role>>("/roles", payload);
+    const response = await apiClient.post<ApiResponse<Role>>(
+      "/admin/roles",
+      payload,
+    );
     return response.data.data;
   },
 
   update: async (id: number, payload: UpdateRolePayload): Promise<Role> => {
     const response = await apiClient.put<ApiResponse<Role>>(
-      `/roles/${id}`,
+      `/admin/roles/${id}`,
       payload,
     );
     return response.data.data;
   },
 
   delete: async (id: number): Promise<void> => {
-    await apiClient.delete(`/roles/${id}`);
+    await apiClient.delete(`/admin/roles/${id}`);
   },
 };
