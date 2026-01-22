@@ -65,6 +65,11 @@ const sidebarItems: SidebarItem[] = [
         href: "/dashboard/settings/address-management",
         roles: ["super_admin", "admin"],
       },
+      {
+        title: "Vehicle Management",
+        href: "/dashboard/settings/vehicle-management",
+        roles: ["super_admin", "admin"],
+      },
     ],
   },
 ];

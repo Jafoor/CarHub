@@ -30,6 +30,13 @@ type SettingsRepository interface {
 	UpdateArea(tx *gorm.DB, area *models.Area) error
 	DeleteArea(tx *gorm.DB, id uint) error
 	ListAreas(offset, limit int, search string, cityID *uint) ([]models.Area, int64, error)
+
+	// VehicleType
+	CreateVehicleType(tx *gorm.DB, vehicleType *models.VehicleType) error
+	GetVehicleType(id uint) (*models.VehicleType, error)
+	UpdateVehicleType(tx *gorm.DB, vehicleType *models.VehicleType) error
+	DeleteVehicleType(tx *gorm.DB, id uint) error
+	ListVehicleTypes(offset, limit int, search string) ([]models.VehicleType, int64, error)
 }
 
 type settingsRepository struct{}
@@ -177,4 +184,49 @@ func (r *settingsRepository) ListAreas(offset, limit int, search string, cityID 
 
 	err = query.Offset(offset).Limit(limit).Order("created_at desc").Find(&areas).Error
 	return areas, total, err
+}
+
+// --- VehicleType ---
+
+func (r *settingsRepository) CreateVehicleType(tx *gorm.DB, vehicleType *models.VehicleType) error {
+	return tx.Create(vehicleType).Error
+}
+
+func (r *settingsRepository) GetVehicleType(id uint) (*models.VehicleType, error) {
+	var vehicleType models.VehicleType
+	err := database.ReadDB.First(&vehicleType, id).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &vehicleType, nil
+}
+
+func (r *settingsRepository) UpdateVehicleType(tx *gorm.DB, vehicleType *models.VehicleType) error {
+	return tx.Save(vehicleType).Error
+}
+
+func (r *settingsRepository) DeleteVehicleType(tx *gorm.DB, id uint) error {
+	return tx.Delete(&models.VehicleType{}, id).Error
+}
+
+func (r *settingsRepository) ListVehicleTypes(offset, limit int, search string) ([]models.VehicleType, int64, error) {
+	var vehicleTypes []models.VehicleType
+	var total int64
+	query := database.ReadDB.Model(&models.VehicleType{})
+
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		query = query.Where("LOWER(name) LIKE ? OR LOWER(display_name) LIKE ?", "%"+searchLower+"%", "%"+searchLower+"%")
+	}
+
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	err = query.Offset(offset).Limit(limit).Order("created_at desc").Find(&vehicleTypes).Error
+	return vehicleTypes, total, err
 }

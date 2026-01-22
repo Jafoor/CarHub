@@ -30,6 +30,14 @@ export interface Area {
   created_at: string;
 }
 
+export interface VehicleType {
+  id: number;
+  name: string;
+  display_name: string;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface SettingsListParams {
   page?: number;
   limit?: number;
@@ -62,24 +70,28 @@ export const settingsApi = {
   getRegions: async (params?: SettingsListParams) => {
     const { data } = await apiClient.get<SettingsListResponse<Region>>(
       "/settings/regions",
-      { params }
+      { params },
     );
     return data;
   },
-  createRegion: async (payload: { name: string; display_name: string; is_active: boolean }) => {
+  createRegion: async (payload: {
+    name: string;
+    display_name: string;
+    is_active: boolean;
+  }) => {
     const { data } = await apiClient.post<SingleResponse<Region>>(
       "/settings/regions",
-      payload
+      payload,
     );
     return data;
   },
   updateRegion: async (
     id: number,
-    payload: { name?: string; display_name?: string; is_active?: boolean }
+    payload: { name?: string; display_name?: string; is_active?: boolean },
   ) => {
     const { data } = await apiClient.put<SingleResponse<Region>>(
       `/settings/regions/${id}`,
-      payload
+      payload,
     );
     return data;
   },
@@ -92,7 +104,7 @@ export const settingsApi = {
   getCities: async (params?: SettingsListParams) => {
     const { data } = await apiClient.get<SettingsListResponse<City>>(
       "/settings/cities",
-      { params }
+      { params },
     );
     return data;
   },
@@ -104,7 +116,7 @@ export const settingsApi = {
   }) => {
     const { data } = await apiClient.post<SingleResponse<City>>(
       "/settings/cities",
-      payload
+      payload,
     );
     return data;
   },
@@ -115,11 +127,11 @@ export const settingsApi = {
       display_name?: string;
       region_id?: number;
       is_active?: boolean;
-    }
+    },
   ) => {
     const { data } = await apiClient.put<SingleResponse<City>>(
       `/settings/cities/${id}`,
-      payload
+      payload,
     );
     return data;
   },
@@ -132,7 +144,7 @@ export const settingsApi = {
   getAreas: async (params?: SettingsListParams) => {
     const { data } = await apiClient.get<SettingsListResponse<Area>>(
       "/settings/areas",
-      { params }
+      { params },
     );
     return data;
   },
@@ -144,7 +156,7 @@ export const settingsApi = {
   }) => {
     const { data } = await apiClient.post<SingleResponse<Area>>(
       "/settings/areas",
-      payload
+      payload,
     );
     return data;
   },
@@ -155,16 +167,54 @@ export const settingsApi = {
       display_name?: string;
       city_id?: number;
       is_active?: boolean;
-    }
+    },
   ) => {
     const { data } = await apiClient.put<SingleResponse<Area>>(
       `/settings/areas/${id}`,
-      payload
+      payload,
     );
     return data;
   },
   deleteArea: async (id: number) => {
     const { data } = await apiClient.delete(`/settings/areas/${id}`);
+    return data;
+  },
+
+  // Vehicle Types
+  getVehicleTypes: async (params?: SettingsListParams) => {
+    const { data } = await apiClient.get<SettingsListResponse<VehicleType>>(
+      "/settings/vehicle-types",
+      { params },
+    );
+    return data;
+  },
+  createVehicleType: async (payload: {
+    name: string;
+    display_name: string;
+    is_active: boolean;
+  }) => {
+    const { data } = await apiClient.post<SingleResponse<VehicleType>>(
+      "/settings/vehicle-types",
+      payload,
+    );
+    return data;
+  },
+  updateVehicleType: async (
+    id: number,
+    payload: {
+      name?: string;
+      display_name?: string;
+      is_active?: boolean;
+    },
+  ) => {
+    const { data } = await apiClient.put<SingleResponse<VehicleType>>(
+      `/settings/vehicle-types/${id}`,
+      payload,
+    );
+    return data;
+  },
+  deleteVehicleType: async (id: number) => {
+    const { data } = await apiClient.delete(`/settings/vehicle-types/${id}`);
     return data;
   },
 };

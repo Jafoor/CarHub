@@ -15,10 +15,8 @@ type SettingsController struct {
 	repo repository.SettingsRepository
 }
 
-func NewSettingsController() *SettingsController {
-	return &SettingsController{
-		repo: repository.NewSettingsRepository(),
-	}
+func NewSettingsController(repo repository.SettingsRepository) *SettingsController {
+	return &SettingsController{repo: repo}
 }
 
 // --- Region Handlers ---
@@ -106,7 +104,7 @@ func (c *SettingsController) UpdateRegion(ctx *fiber.Ctx) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID", nil)
 	}
 
-	var input CreateRegionInput // Reusing input struct as fields are same
+	var input CreateRegionInput // Reusing input struct
 	if err := ctx.BodyParser(&input); err != nil {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid input", err.Error())
 	}
@@ -142,7 +140,6 @@ func (c *SettingsController) DeleteRegion(ctx *fiber.Ctx) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID", nil)
 	}
 
-	// Check if region exists
 	region, err := c.repo.GetRegion(uint(id))
 	if err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to get region", err.Error())
@@ -151,13 +148,7 @@ func (c *SettingsController) DeleteRegion(ctx *fiber.Ctx) error {
 		return utils.ErrorResponse(ctx, http.StatusNotFound, "Region not found", nil)
 	}
 
-	// Check for dependent cities is handled by DB constraint (RESTRICT), but good to check here or handle error
-	if len(region.Cities) > 0 {
-		return utils.ErrorResponse(ctx, http.StatusConflict, "Cannot delete region with associated cities", nil)
-	}
-
 	if err := c.repo.DeleteRegion(database.WriteDB, uint(id)); err != nil {
-		// Could catch specific DB error here
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to delete region", err.Error())
 	}
 
@@ -170,13 +161,6 @@ type CreateCityInput struct {
 	Name        string `json:"name"`
 	DisplayName string `json:"display_name"`
 	RegionID    uint   `json:"region_id"`
-	IsActive    *bool  `json:"is_active"`
-}
-
-type UpdateCityInput struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"display_name"`
-	RegionID    *uint  `json:"region_id"`
 	IsActive    *bool  `json:"is_active"`
 }
 
@@ -213,11 +197,10 @@ func (c *SettingsController) ListCities(ctx *fiber.Ctx) error {
 	page, _ := strconv.Atoi(ctx.Query("page", "1"))
 	limit, _ := strconv.Atoi(ctx.Query("limit", "10"))
 	search := ctx.Query("search", "")
-	regionIDParam := ctx.Query("region_id", "")
 	
 	var regionID *uint
-	if regionIDParam != "" {
-		id, err := strconv.Atoi(regionIDParam)
+	if rid := ctx.Query("region_id"); rid != "" {
+		id, err := strconv.Atoi(rid)
 		if err == nil {
 			uid := uint(id)
 			regionID = &uid
@@ -268,7 +251,7 @@ func (c *SettingsController) UpdateCity(ctx *fiber.Ctx) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID", nil)
 	}
 
-	var input UpdateCityInput
+	var input CreateCityInput // Reusing input struct
 	if err := ctx.BodyParser(&input); err != nil {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid input", err.Error())
 	}
@@ -287,10 +270,8 @@ func (c *SettingsController) UpdateCity(ctx *fiber.Ctx) error {
 	if input.DisplayName != "" {
 		city.DisplayName = input.DisplayName
 	}
-	if input.RegionID != nil {
-		city.RegionID = *input.RegionID
-		// Clear the preloaded Region association to avoid conflict during save and response
-		city.Region = nil
+	if input.RegionID != 0 {
+		city.RegionID = input.RegionID
 	}
 	if input.IsActive != nil {
 		city.IsActive = *input.IsActive
@@ -317,10 +298,6 @@ func (c *SettingsController) DeleteCity(ctx *fiber.Ctx) error {
 		return utils.ErrorResponse(ctx, http.StatusNotFound, "City not found", nil)
 	}
 
-	if len(city.Areas) > 0 {
-		return utils.ErrorResponse(ctx, http.StatusConflict, "Cannot delete city with associated areas", nil)
-	}
-
 	if err := c.repo.DeleteCity(database.WriteDB, uint(id)); err != nil {
 		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to delete city", err.Error())
 	}
@@ -334,13 +311,6 @@ type CreateAreaInput struct {
 	Name        string `json:"name"`
 	DisplayName string `json:"display_name"`
 	CityID      uint   `json:"city_id"`
-	IsActive    *bool  `json:"is_active"`
-}
-
-type UpdateAreaInput struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"display_name"`
-	CityID      *uint  `json:"city_id"`
 	IsActive    *bool  `json:"is_active"`
 }
 
@@ -377,11 +347,10 @@ func (c *SettingsController) ListAreas(ctx *fiber.Ctx) error {
 	page, _ := strconv.Atoi(ctx.Query("page", "1"))
 	limit, _ := strconv.Atoi(ctx.Query("limit", "10"))
 	search := ctx.Query("search", "")
-	cityIDParam := ctx.Query("city_id", "")
 	
 	var cityID *uint
-	if cityIDParam != "" {
-		id, err := strconv.Atoi(cityIDParam)
+	if cid := ctx.Query("city_id"); cid != "" {
+		id, err := strconv.Atoi(cid)
 		if err == nil {
 			uid := uint(id)
 			cityID = &uid
@@ -432,7 +401,7 @@ func (c *SettingsController) UpdateArea(ctx *fiber.Ctx) error {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID", nil)
 	}
 
-	var input UpdateAreaInput
+	var input CreateAreaInput // Reusing input struct
 	if err := ctx.BodyParser(&input); err != nil {
 		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid input", err.Error())
 	}
@@ -451,10 +420,8 @@ func (c *SettingsController) UpdateArea(ctx *fiber.Ctx) error {
 	if input.DisplayName != "" {
 		area.DisplayName = input.DisplayName
 	}
-	if input.CityID != nil {
-		area.CityID = *input.CityID
-		// Clear the preloaded City association to avoid conflict during save and response
-		area.City = nil
+	if input.CityID != 0 {
+		area.CityID = input.CityID
 	}
 	if input.IsActive != nil {
 		area.IsActive = *input.IsActive
@@ -486,4 +453,140 @@ func (c *SettingsController) DeleteArea(ctx *fiber.Ctx) error {
 	}
 
 	return utils.SuccessResponse(ctx, "Area deleted successfully", nil)
+}
+
+// --- VehicleType Handlers ---
+
+type CreateVehicleTypeInput struct {
+	Name        string `json:"name"`
+	DisplayName string `json:"display_name"`
+	IsActive    *bool  `json:"is_active"`
+}
+
+func (c *SettingsController) CreateVehicleType(ctx *fiber.Ctx) error {
+	var input CreateVehicleTypeInput
+	if err := ctx.BodyParser(&input); err != nil {
+		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid input", err.Error())
+	}
+
+	if input.Name == "" || input.DisplayName == "" {
+		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Name and Display Name are required", nil)
+	}
+
+	isActive := true
+	if input.IsActive != nil {
+		isActive = *input.IsActive
+	}
+
+	vehicleType := &models.VehicleType{
+		Name:        input.Name,
+		DisplayName: input.DisplayName,
+		IsActive:    isActive,
+	}
+
+	if err := c.repo.CreateVehicleType(database.WriteDB, vehicleType); err != nil {
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to create vehicle type", err.Error())
+	}
+
+	return utils.SuccessResponse(ctx, "Vehicle type created successfully", vehicleType)
+}
+
+func (c *SettingsController) ListVehicleTypes(ctx *fiber.Ctx) error {
+	page, _ := strconv.Atoi(ctx.Query("page", "1"))
+	limit, _ := strconv.Atoi(ctx.Query("limit", "10"))
+	search := ctx.Query("search", "")
+
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+
+	vehicleTypes, total, err := c.repo.ListVehicleTypes(offset, limit, search)
+	if err != nil {
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to list vehicle types", err.Error())
+	}
+
+	return utils.SuccessResponse(ctx, "Vehicle types retrieved successfully", fiber.Map{
+		"items": vehicleTypes,
+		"total": total,
+		"page":  page,
+		"limit": limit,
+	})
+}
+
+func (c *SettingsController) GetVehicleType(ctx *fiber.Ctx) error {
+	id, err := strconv.Atoi(ctx.Params("id"))
+	if err != nil {
+		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID", nil)
+	}
+
+	vehicleType, err := c.repo.GetVehicleType(uint(id))
+	if err != nil {
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to get vehicle type", err.Error())
+	}
+	if vehicleType == nil {
+		return utils.ErrorResponse(ctx, http.StatusNotFound, "Vehicle type not found", nil)
+	}
+
+	return utils.SuccessResponse(ctx, "Vehicle type retrieved successfully", vehicleType)
+}
+
+func (c *SettingsController) UpdateVehicleType(ctx *fiber.Ctx) error {
+	id, err := strconv.Atoi(ctx.Params("id"))
+	if err != nil {
+		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID", nil)
+	}
+
+	var input CreateVehicleTypeInput // Reusing input struct
+	if err := ctx.BodyParser(&input); err != nil {
+		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid input", err.Error())
+	}
+
+	vehicleType, err := c.repo.GetVehicleType(uint(id))
+	if err != nil {
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to get vehicle type", err.Error())
+	}
+	if vehicleType == nil {
+		return utils.ErrorResponse(ctx, http.StatusNotFound, "Vehicle type not found", nil)
+	}
+
+	if input.Name != "" {
+		vehicleType.Name = input.Name
+	}
+	if input.DisplayName != "" {
+		vehicleType.DisplayName = input.DisplayName
+	}
+	if input.IsActive != nil {
+		vehicleType.IsActive = *input.IsActive
+	}
+
+	if err := c.repo.UpdateVehicleType(database.WriteDB, vehicleType); err != nil {
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to update vehicle type", err.Error())
+	}
+
+	return utils.SuccessResponse(ctx, "Vehicle type updated successfully", vehicleType)
+}
+
+func (c *SettingsController) DeleteVehicleType(ctx *fiber.Ctx) error {
+	id, err := strconv.Atoi(ctx.Params("id"))
+	if err != nil {
+		return utils.ErrorResponse(ctx, http.StatusBadRequest, "Invalid ID", nil)
+	}
+
+	vehicleType, err := c.repo.GetVehicleType(uint(id))
+	if err != nil {
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to get vehicle type", err.Error())
+	}
+	if vehicleType == nil {
+		return utils.ErrorResponse(ctx, http.StatusNotFound, "Vehicle type not found", nil)
+	}
+
+	if err := c.repo.DeleteVehicleType(database.WriteDB, uint(id)); err != nil {
+		return utils.ErrorResponse(ctx, http.StatusInternalServerError, "Failed to delete vehicle type", err.Error())
+	}
+
+	return utils.SuccessResponse(ctx, "Vehicle type deleted successfully", nil)
 }

@@ -4,13 +4,15 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/jafoor/carhub/libs/middleware"
 	"github.com/jafoor/carhub/services/settings/controller"
+	"github.com/jafoor/carhub/services/settings/repository"
 )
 
 func RegisterSettingsRoutes(app *fiber.App) {
 	v1 := app.Group("/api/v1")
 	settingsGroup := v1.Group("/settings", middleware.RequireAdminAuth())
 
-	settingsCtrl := controller.NewSettingsController()
+	settingsRepo := repository.NewSettingsRepository()
+	settingsCtrl := controller.NewSettingsController(settingsRepo)
 
 	// Middleware to restrict modification to admin or super_admin
 	// Note: RequireRoles("admin") allows both "admin" and "super_admin" roles (super_admin bypass)
@@ -36,4 +38,11 @@ func RegisterSettingsRoutes(app *fiber.App) {
 	settingsGroup.Get("/areas/:id", settingsCtrl.GetArea)
 	settingsGroup.Put("/areas/:id", restrictModification, settingsCtrl.UpdateArea)
 	settingsGroup.Delete("/areas/:id", restrictModification, settingsCtrl.DeleteArea)
+
+	// Vehicle Type Routes
+	settingsGroup.Post("/vehicle-types", restrictModification, settingsCtrl.CreateVehicleType)
+	settingsGroup.Get("/vehicle-types", settingsCtrl.ListVehicleTypes)
+	settingsGroup.Get("/vehicle-types/:id", settingsCtrl.GetVehicleType)
+	settingsGroup.Put("/vehicle-types/:id", restrictModification, settingsCtrl.UpdateVehicleType)
+	settingsGroup.Delete("/vehicle-types/:id", restrictModification, settingsCtrl.DeleteVehicleType)
 }
